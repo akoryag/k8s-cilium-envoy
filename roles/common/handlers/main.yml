@@ -1,0 +1,10 @@
+---
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+
+- name: restart journald
+  systemd:
+    name: systemd-journald
+    state: restarted
