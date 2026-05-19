@@ -51,7 +51,9 @@ Group vars (`group_vars/all.yml`): `k8s_version`, `k8s_minor`, `pod_cidr`.
 - Source image: Ubuntu 24.04 cloud image (`ubuntu-24.04-server-cloudimg-amd64.img`).
 - Output: `ubuntu-24.04-custom.qcow2` (QEMU/KVM, qcow2 format, compressed).
 - SSH into the builder VM as `ubuntu` / password `packer`.
-- Cloud-init sets up password auth, installs qemu-guest-agent, then powers off.
+- Cloud-init `user-data` must be minimal — only setup user/SSH. Do **not** use `package_update`, `packages`, or `power_state` in cloud-init; Packer provisioners handle package install and `shutdown_command` handles poweroff. `power_state` in cloud-init will shut down the VM before Packer can SSH in.
+- The top-level `password` key in cloud-init is **deprecated on Ubuntu 24.04** (cloud-init 24.x) and causes `status: error`. Use `users[0].passwd` (SHA-512 hash from `openssl passwd -6`) instead.
+- `cd_files = ["./cloud-init/user-data", "./cloud-init/meta-data"]` with `cd_label = "cidata"` — both files must be at the root of the ISO for NoCloud datasource.
 - Checksum must be updated in `packer/ubuntu-qcow.pkr.hcl` if the upstream image changes.
 
 ## Gotchas

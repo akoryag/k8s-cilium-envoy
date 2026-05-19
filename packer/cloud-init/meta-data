@@ -1,1 +1,1 @@
-local-hostname: packer-builder
+local-hostname: k8s-node

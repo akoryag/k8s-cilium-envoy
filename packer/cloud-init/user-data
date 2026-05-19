@@ -6,17 +6,3 @@ users:
     shell: /bin/bash
     passwd: "$6$gIfdDgF1qHgg4rav$CtRHRfpopmjN5vQOQbesqCH.jw69hMrRw21n7t8diLp2I1zvM80AS3qTKk7tFJsR8ALx0GQ5D6d2r2N8smAXd/" # Хеш пароля "packer" можно сгенерировать командой: openssl passwd -6
     lock_passwd: false
-password: packer
-chpasswd:
-  expire: false
-package_update: true
-packages:
-  - qemu-guest-agent
-runcmd:
-  - [ systemctl, enable, qemu-guest-agent ]
-  - [ systemctl, start, qemu-guest-agent ]
-power_state:
-  mode: poweroff
-  message: "Packer Shutdown"
-  timeout: 30
-  condition: true
