@@ -1,7 +1,8 @@
 ---
 - hosts: all
   become: true
-  any_errors_fatal: true
-  gather_facts: true
+  # any_errors_fatal: true
+  gather_facts: false
   roles:
     - common
+    - init

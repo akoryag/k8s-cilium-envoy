@@ -1,0 +1,37 @@
+---
+- name: Initialize Kubernetes cluster (first control plane)
+  command:
+    argv:
+      - kubeadm
+      - init
+      - "--control-plane-endpoint={{ ansible_host }}:6443"
+      - "--pod-network-cidr={{ pod_cidr }}"
+      - --skip-phases=wait-control-plane
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: kubeadm_init
+  when: inventory_hostname == groups['master'][0]
+
+- name: Wait for API server
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 6443
+    timeout: 300
+  when: inventory_hostname == groups['master'][0]
+
+- name: kubeconfig for root
+  when: inventory_hostname == groups['master'][0]
+  block:
+    - name: Create .kube directory
+      file:
+        path: /root/.kube
+        state: directory
+
+    - name: Copy admin kubeconfig
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: yes
+        owner: root
+        group: root
+        mode: "0600"

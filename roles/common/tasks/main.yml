@@ -1,4 +1,13 @@
 ---
+- name: Disable swap for the current session
+  command: swapoff -a
+
+- name: Remove swap entry from fstab
+  mount:
+    name: none
+    fstype: swap
+    state: absent
+
 - name: Load kernel modules
   copy:
     content: |
