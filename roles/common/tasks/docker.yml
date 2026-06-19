@@ -6,7 +6,7 @@
 
 - name: Add Docker repository
   apt_repository:
-    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu noble stable"
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ubuntu_codename }} stable"
     state: present
     update_cache: yes
 
@@ -37,15 +37,20 @@
 
 - name: Generate default containerd config
   shell: containerd config default > /etc/containerd/config.toml
+  args:
+    creates: /etc/containerd/config.toml
+  notify: restart containerd
+
+- name: Enable CRI plugin in containerd
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: 'disabled_plugins\s*=\s*\["cri"\]'
+    replace: 'disabled_plugins = []'
+  notify: restart containerd
 
 - name: Enable systemd cgroup in containerd
   replace:
     path: /etc/containerd/config.toml
     regexp: 'SystemdCgroup = false'
     replace: 'SystemdCgroup = true'
-
-- name: Restart containerd after config change
-  systemd:
-    name: containerd
-    state: restarted
-    daemon_reload: yes
+  notify: restart containerd

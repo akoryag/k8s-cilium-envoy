@@ -1,6 +1,7 @@
 ---
 - name: Disable swap for the current session
   command: swapoff -a
+  changed_when: false
 
 - name: Remove swap entry from fstab
   mount:
@@ -42,8 +43,8 @@
     line: 'SystemMaxUse=200M'
   notify: restart journald
 
-- name: install docker
+- name: Install Docker
   import_tasks: docker.yml
 
-- name: install k8s
+- name: Install Kubernetes
   import_tasks: k8s.yml

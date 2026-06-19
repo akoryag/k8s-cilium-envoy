@@ -1,8 +1,23 @@
 ---
 - hosts: all
   become: true
-  # any_errors_fatal: true
   gather_facts: false
   roles:
     - common
+
+- hosts: master
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  serial: 1
+  roles:
     - init
+    - join
+
+- hosts: workers
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  serial: 1
+  roles:
+    - join

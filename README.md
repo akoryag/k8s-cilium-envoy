@@ -114,3 +114,15 @@ cilium install \
   7. Удаляем kube-proxy (ВАЖНО)
   kubectl -n kube-system delete ds kube-proxy
 
+
+cilium install \
+  --set kubeProxyReplacement=true \
+  --set ingressController.enabled=true \
+  --set ingressController.loadbalancerMode=dedicated \
+  --set envoy.enabled=true
+
+
+
+kubeadm token create --print-join-command
+kubeadm init phase upload-certs --upload-certs
+--control-plane --certificate-key
