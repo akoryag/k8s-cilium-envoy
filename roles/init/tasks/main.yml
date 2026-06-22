@@ -10,6 +10,7 @@
           - "--pod-network-cidr={{ pod_cidr }}"
           - "--image-repository={{ k8s_image_repo }}"
           - "--kubernetes-version={{ k8s_version }}"
+          - "--control-plane-endpoint={{ control_plane_endpoint }}"
       args:
         creates: /etc/kubernetes/admin.conf
 
@@ -34,5 +35,5 @@
         group: root
         mode: "0600"
 
-    - name: Install Cilium
-      ansible.builtin.import_tasks: cilium.yml
+    # - name: Install Cilium
+    #   ansible.builtin.import_tasks: cilium.yml

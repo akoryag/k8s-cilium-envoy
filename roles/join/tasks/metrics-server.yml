@@ -1,0 +1,47 @@
+---
+- name: Fetch kubeconfig from master
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: /tmp/kubeconfig-master
+    flat: true
+  delegate_to: "{{ groups['master'][0] }}"
+
+- name: Add metrics-server helm repo
+  kubernetes.core.helm_repository:
+    name: metrics-server
+    repo_url: https://kubernetes-sigs.github.io/metrics-server/
+    kubeconfig: /tmp/kubeconfig-master
+  delegate_to: localhost
+
+- name: Install metrics-server
+  kubernetes.core.helm:
+    name: metrics-server
+    chart_ref: metrics-server/metrics-server
+    release_namespace: kube-system
+    kubeconfig: /tmp/kubeconfig-master
+    values:
+      image:
+        repository: "{{ image_repo }}/metrics-server/metrics-server"
+  delegate_to: localhost
+
+- name: Wait for metrics-server deployment
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /tmp/kubeconfig-master
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - deployment
+      - metrics-server
+  delegate_to: localhost
+  register: _metrics_rollout
+  changed_when: false
+
+- name: Remove temporary kubeconfig
+  ansible.builtin.file:
+    path: /tmp/kubeconfig-master
+    state: absent
+  delegate_to: localhost

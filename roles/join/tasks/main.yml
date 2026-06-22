@@ -31,3 +31,8 @@
       ansible.builtin.command: "{{ _join_cmd.stdout }}"
       args:
         creates: /etc/kubernetes/kubelet.conf
+
+    # - name: Install metrics-server
+    #   ansible.builtin.import_tasks: metrics-server.yml
+    #   when: inventory_hostname == groups['workers'][0]
+
