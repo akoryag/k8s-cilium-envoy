@@ -1,0 +1,69 @@
+---
+- name: Check if Cilium CLI is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/cilium
+  register: _init_cilium_cli
+
+- name: Download Cilium CLI archive
+  ansible.builtin.get_url:
+    url: https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz
+    dest: /tmp/cilium-linux-amd64.tar.gz
+    mode: "0644"
+  delegate_to: localhost
+  run_once: true
+  when: not _init_cilium_cli.stat.exists
+
+- name: Install Cilium CLI
+  ansible.builtin.unarchive:
+    src: /tmp/cilium-linux-amd64.tar.gz
+    dest: /usr/local/bin
+    mode: "0755"
+  when: not _init_cilium_cli.stat.exists
+
+- name: Remove downloaded archive
+  ansible.builtin.file:
+    path: /tmp/cilium-linux-amd64.tar.gz
+    state: absent
+  delegate_to: localhost
+  run_once: true
+  when: not _init_cilium_cli.stat.exists
+
+- name: Check if Cilium is already installed
+  ansible.builtin.command: cilium status
+  register: _init_cilium_status
+  failed_when: false
+  changed_when: false
+
+- name: Install Cilium
+  ansible.builtin.command:
+    argv:
+      - cilium
+      - install
+      - --set
+      - kubeProxyReplacement=true
+      - --set
+      - ingressController.enabled=true
+      - --set
+      - ingressController.loadbalancerMode=dedicated
+      - --set
+      - envoy.enabled=true
+  when: _init_cilium_status.rc != 0
+  changed_when: true
+
+- name: Wait for Cilium to be ready
+  ansible.builtin.command:
+    argv:
+      - cilium
+      - status
+      - --wait
+      - --wait-duration
+      - "5m"
+  changed_when: false
+
+- name: Delete kube-proxy DaemonSet
+  ansible.builtin.command: kubectl -n kube-system delete ds kube-proxy
+  register: _init_delete_proxy
+  failed_when:
+    - _init_delete_proxy.rc != 0
+    - '"not found" not in _init_delete_proxy.stderr'
+  changed_when: _init_delete_proxy.rc == 0

@@ -33,3 +33,6 @@
         owner: root
         group: root
         mode: "0600"
+
+    - name: Install Cilium
+      ansible.builtin.import_tasks: cilium.yml
