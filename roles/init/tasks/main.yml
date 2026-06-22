@@ -8,6 +8,8 @@
           - kubeadm
           - init
           - "--pod-network-cidr={{ pod_cidr }}"
+          - "--image-repository={{ k8s_image_repo }}"
+          - "--kubernetes-version={{ k8s_version }}" 
       args:
         creates: /etc/kubernetes/admin.conf
 

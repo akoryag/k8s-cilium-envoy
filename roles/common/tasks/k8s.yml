@@ -13,9 +13,9 @@
 - name: Install Kubernetes packages
   apt:
     name:
-      - "kubelet"
-      - "kubeadm"
-      - "kubectl"
+      - kubelet={{ k8s_version }}-1.1
+      - kubeadm={{ k8s_version }}-1.1
+      - kubectl={{ k8s_version }}-1.1
     state: present
     update_cache: yes
 
