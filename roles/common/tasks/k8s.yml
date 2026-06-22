@@ -1,26 +1,28 @@
 ---
 - name: Add Kubernetes GPG key
-  apt_key:
+  ansible.builtin.apt_key:
     url: https://pkgs.k8s.io/core:/stable:/v{{ k8s_minor }}/deb/Release.key
     keyring: /usr/share/keyrings/kubernetes-keyring.gpg
 
 - name: Add Kubernetes repository
-  apt_repository:
-    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/kubernetes-keyring.gpg] https://{{ k8s_repo_mirror }}/mirrors/pkgs.k8s.io/core/stable/v{{ k8s_minor }}/deb/ /"
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch=amd64 signed-by=/usr/share/keyrings/kubernetes-keyring.gpg]
+      https://{{ k8s_repo_mirror }}/mirrors/pkgs.k8s.io/core/stable/v{{ k8s_minor }}/deb/ /
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Install Kubernetes packages
-  apt:
+  ansible.builtin.apt:
     name:
       - kubelet={{ k8s_version }}-1.1
       - kubeadm={{ k8s_version }}-1.1
       - kubectl={{ k8s_version }}-1.1
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Hold Kubernetes packages
-  dpkg_selections:
+  ansible.builtin.dpkg_selections:
     name: "{{ item }}"
     selection: hold
   loop:

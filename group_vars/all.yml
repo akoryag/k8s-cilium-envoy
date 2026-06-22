@@ -1,7 +1,7 @@
 ---
 ubuntu_codename: "noble"
 k8s_version: "1.35.4"
-k8s_minor: "1.35"
+k8s_minor: "{{ k8s_version.split('.')[:2] | join('.') }}"
 pod_cidr: "10.244.0.0/16"
 control_plane_port: "6443"
 k8s_repo_mirror: "mirror.yandex.ru"

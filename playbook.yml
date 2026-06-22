@@ -1,11 +1,13 @@
 ---
-- hosts: all
+- name: Configure all hosts
+  hosts: all
   become: true
   gather_facts: false
   roles:
     - common
 
-- hosts: master
+- name: Initialize control-plane nodes
+  hosts: master
   become: true
   gather_facts: false
   any_errors_fatal: true
@@ -14,7 +16,8 @@
     - init
     - join
 
-- hosts: workers
+- name: Join worker nodes
+  hosts: workers
   become: true
   gather_facts: false
   any_errors_fatal: true

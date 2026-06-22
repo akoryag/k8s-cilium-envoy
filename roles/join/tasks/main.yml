@@ -1,6 +1,6 @@
 ---
 - name: Get join command from first master
-  command: kubeadm token create --print-join-command
+  ansible.builtin.command: kubeadm token create --print-join-command
   register: _join_cmd
   delegate_to: "{{ groups['master'][0] }}"
   changed_when: false
@@ -11,16 +11,16 @@
     - inventory_hostname != groups['master'][0]
   block:
     - name: Get certificate key
-      command: kubeadm init phase upload-certs --upload-certs
-      register: _cert_key
+      ansible.builtin.command: kubeadm init phase upload-certs --upload-certs
+      register: _join_cert_key
       delegate_to: "{{ groups['master'][0] }}"
       changed_when: false
 
     - name: Join as control-plane
-      shell: >-
+      ansible.builtin.command: >-
         {{ _join_cmd.stdout }}
         --control-plane
-        --certificate-key {{ _cert_key.stdout | regex_search('[a-f0-9]{64}') }}
+        --certificate-key {{ _join_cert_key.stdout | regex_search('[a-f0-9]{64}') }}
       args:
         creates: /etc/kubernetes/admin.conf
 
@@ -28,6 +28,6 @@
   when: inventory_hostname in groups['workers']
   block:
     - name: Join as worker
-      command: "{{ _join_cmd.stdout }}"
+      ansible.builtin.command: "{{ _join_cmd.stdout }}"
       args:
         creates: /etc/kubernetes/kubelet.conf

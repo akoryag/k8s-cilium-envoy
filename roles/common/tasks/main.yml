@@ -1,20 +1,21 @@
 ---
 - name: Disable swap for the current session
-  command: swapoff -a
+  ansible.builtin.command: swapoff -a
   changed_when: false
 
 - name: Remove swap entry from fstab
-  mount:
+  ansible.posix.mount:
     name: none
     fstype: swap
     state: absent
 
 - name: Load kernel modules
-  copy:
+  ansible.builtin.copy:
     content: |
       overlay
       br_netfilter
     dest: /etc/modules-load.d/k8s.conf
+    mode: "0644"
 
 - name: Enable kernel modules
   community.general.modprobe:
@@ -25,26 +26,26 @@
     - br_netfilter
 
 - name: Configure sysctl for Kubernetes
-  sysctl:
+  ansible.posix.sysctl:
     name: "{{ item.key }}"
     value: "{{ item.value }}"
-    sysctl_set: yes
+    sysctl_set: true
     state: present
-    reload: yes
+    reload: true
   loop:
     - { key: net.ipv4.ip_forward, value: "1" }
     - { key: net.bridge.bridge-nf-call-iptables, value: "1" }
     - { key: net.bridge.bridge-nf-call-ip6tables, value: "1" }
 
 - name: Limit journald log size
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/systemd/journald.conf
     regexp: '^#?SystemMaxUse='
     line: 'SystemMaxUse=200M'
-  notify: restart journald
+  notify: Restart journald
 
 - name: Install Docker
-  import_tasks: docker.yml
+  ansible.builtin.import_tasks: docker.yml
 
 - name: Install Kubernetes
-  import_tasks: k8s.yml
+  ansible.builtin.import_tasks: k8s.yml

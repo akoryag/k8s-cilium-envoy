@@ -1,17 +1,17 @@
 ---
 - name: Add Docker GPG key
-  apt_key:
+  ansible.builtin.apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
     keyring: /usr/share/keyrings/docker-archive-keyring.gpg
 
 - name: Add Docker repository
-  apt_repository:
+  ansible.builtin.apt_repository:
     repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ubuntu_codename }} stable"
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Install Docker and containerd
-  apt:
+  ansible.builtin.apt:
     name:
       - docker-ce
       - docker-ce-cli
@@ -19,10 +19,10 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Configure Docker daemon
-  copy:
+  ansible.builtin.copy:
     dest: /etc/docker/daemon.json
     content: |
       {
@@ -33,24 +33,25 @@
           "max-file": "1"
         }
       }
-  notify: restart docker
+    mode: "0644"
+  notify: Restart docker
 
 - name: Generate default containerd config
-  shell: containerd config default > /etc/containerd/config.toml
+  ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
   args:
     creates: /etc/containerd/config.toml
-  notify: restart containerd
+  notify: Restart containerd
 
 - name: Enable CRI plugin in containerd
-  replace:
+  ansible.builtin.replace:
     path: /etc/containerd/config.toml
     regexp: 'disabled_plugins\s*=\s*\["cri"\]'
     replace: 'disabled_plugins = []'
-  notify: restart containerd
+  notify: Restart containerd
 
 - name: Enable systemd cgroup in containerd
-  replace:
+  ansible.builtin.replace:
     path: /etc/containerd/config.toml
     regexp: 'SystemdCgroup = false'
     replace: 'SystemdCgroup = true'
-  notify: restart containerd
+  notify: Restart containerd
