@@ -24,3 +24,10 @@
   serial: 1
   roles:
     - join
+
+- name: Post-cluster configuration
+  hosts: master
+  become: true
+  gather_facts: false
+  roles:
+    - post-cluster

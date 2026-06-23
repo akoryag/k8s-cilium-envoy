@@ -6,7 +6,7 @@
 
 - name: Add Docker repository
   ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ubuntu_codename }} stable"
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://{{ docker_repo_mirror }}/linux/ubuntu {{ ubuntu_codename }} stable"
     state: present
     update_cache: true
 

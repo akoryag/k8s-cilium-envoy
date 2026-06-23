@@ -8,7 +8,7 @@
   ansible.builtin.apt_repository:
     repo: >-
       deb [arch=amd64 signed-by=/usr/share/keyrings/kubernetes-keyring.gpg]
-      https://{{ k8s_repo_mirror }}/mirrors/pkgs.k8s.io/core/stable/v{{ k8s_minor }}/deb/ /
+      https://{{ repo_mirror }}/mirrors/pkgs.k8s.io/core/stable/v{{ k8s_minor }}/deb/ /
     state: present
     update_cache: true
 

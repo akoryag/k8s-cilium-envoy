@@ -1,19 +1,39 @@
 ---
-- name: Fetch kubeconfig from master
+- name: Fetch kubeconfig
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
     dest: /tmp/kubeconfig-master
     flat: true
   delegate_to: "{{ groups['master'][0] }}"
+  run_once: true
+
+- name: Check if metrics-server is already installed
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /tmp/kubeconfig-master
+      - -n
+      - kube-system
+      - get
+      - deployment
+      - metrics-server
+  register: _metrics_installed
+  failed_when: false
+  changed_when: false
+  run_once: true
 
 - name: Add metrics-server helm repo
+  when: _metrics_installed.rc != 0
   kubernetes.core.helm_repository:
     name: metrics-server
     repo_url: https://kubernetes-sigs.github.io/metrics-server/
     kubeconfig: /tmp/kubeconfig-master
   delegate_to: localhost
+  run_once: true
 
 - name: Install metrics-server
+  when: _metrics_installed.rc != 0
   kubernetes.core.helm:
     name: metrics-server
     chart_ref: metrics-server/metrics-server
@@ -21,10 +41,14 @@
     kubeconfig: /tmp/kubeconfig-master
     values:
       image:
-        repository: "{{ image_repo }}/metrics-server/metrics-server"
+        repository: "{{ k8s_image_repo }}/metrics-server/metrics-server"
+      args:
+        - --kubelet-insecure-tls
   delegate_to: localhost
+  run_once: true
 
 - name: Wait for metrics-server deployment
+  when: _metrics_installed.rc != 0
   ansible.builtin.command:
     argv:
       - kubectl
@@ -39,9 +63,11 @@
   delegate_to: localhost
   register: _metrics_rollout
   changed_when: false
+  run_once: true
 
 - name: Remove temporary kubeconfig
   ansible.builtin.file:
     path: /tmp/kubeconfig-master
     state: absent
   delegate_to: localhost
+  run_once: true

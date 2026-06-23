@@ -95,6 +95,7 @@ curl -L --remote-name https://github.com/cilium/cilium-cli/releases/latest/downl
 tar xzvf cilium-linux-amd64.tar.gz
 mv cilium /usr/local/bin/
 
+
 # Посмотрите список нод
 kubectl get nodes
 
@@ -119,10 +120,21 @@ cilium install \
   --set kubeProxyReplacement=true \
   --set ingressController.enabled=true \
   --set ingressController.loadbalancerMode=dedicated \
-  --set envoy.enabled=true
+  --set envoy.enabled=true \
+  --set envoy.image.repository=quay.m.daocloud.io/cilium/cilium-envoy \
+  --set image.repository="quay.m.daocloud.io/cilium/cilium" \
+  --set operator.image.repository="quay.m.daocloud.io/cilium/operator" \
+  --set hubble.relay.image.repository="quay.m.daocloud.io/cilium/hubble-relay"
 
-
+https://github.com/kubernetes-sigs/kubespray/blob/master/docs/operations/mirror.md
 
 kubeadm token create --print-join-command
 kubeadm init phase upload-certs --upload-certs
 --control-plane --certificate-key
+
+
+cilium install \
+  --set kubeProxyReplacement=true \
+  --set ingressController.enabled=true \
+  --set ingressController.loadbalancerMode=dedicated \
+  --set envoy.enabled=true 

@@ -44,6 +44,18 @@
     line: 'SystemMaxUse=200M'
   notify: Restart journald
 
+- name: Switch APT to Yandex mirrors (legacy sources.list)
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: 'https?://([a-z]{2}\.)?(archive|security)\.ubuntu\.com/ubuntu/?'
+    replace: 'http://{{ repo_mirror }}/ubuntu/'
+
+- name: Switch APT to Yandex mirrors (DEB822 format)
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list.d/ubuntu.sources
+    regexp: '^URIs:\s*https?://([a-z]{2}\.)?(archive|security)\.ubuntu\.com/ubuntu/?'
+    replace: 'URIs: http://{{ repo_mirror }}/ubuntu/'
+
 - name: Install Docker
   ansible.builtin.import_tasks: docker.yml
 

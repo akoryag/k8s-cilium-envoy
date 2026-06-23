@@ -1,44 +1,79 @@
 ---
-- name: Fetch kubeconfig from master
+- name: Fetch kubeconfig
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
     dest: /tmp/kubeconfig-cilium
     flat: true
+  run_once: true
+
+- name: Check if Cilium is already installed
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /tmp/kubeconfig-cilium
+      - -n
+      - kube-system
+      - get
+      - ds
+      - cilium
+  register: _cilium_installed
+  failed_when: false
+  changed_when: false
+  run_once: true
 
 - name: Add Cilium helm repo
+  when: _cilium_installed.rc != 0
   kubernetes.core.helm_repository:
     name: cilium
     repo_url: https://helm.cilium.io/
     kubeconfig: /tmp/kubeconfig-cilium
   delegate_to: localhost
+  run_once: true
 
 - name: Install Cilium
+  when: _cilium_installed.rc != 0
   kubernetes.core.helm:
     name: cilium
     chart_ref: cilium/cilium
+    chart_version: 1.19.3
     release_namespace: kube-system
     kubeconfig: /tmp/kubeconfig-cilium
     values:
-      image:
-        repository: "{{ image_repo }}/cilium/cilium"
       kubeProxyReplacement: true
       ingressController:
         enabled: true
         loadbalancerMode: dedicated
       envoy:
         enabled: true
+        image:
+          repository: "{{ quay_image_repo }}/cilium/cilium-envoy"
+      image:
+        repository: "{{ quay_image_repo }}/cilium/cilium"
+      operator:
+        replicas: 1
+        image:
+          repository: "{{ quay_image_repo }}/cilium/operator"
+      hubble:
+        relay:
+          image:
+            repository: "{{ quay_image_repo }}/cilium/hubble-relay"
   delegate_to: localhost
+  run_once: true
 
 - name: Delete kube-proxy DaemonSet
+  when: _cilium_installed.rc != 0
   ansible.builtin.command: kubectl -n kube-system delete ds kube-proxy
   register: _init_delete_proxy
   failed_when:
     - _init_delete_proxy.rc != 0
     - '"not found" not in _init_delete_proxy.stderr'
   changed_when: _init_delete_proxy.rc == 0
+  run_once: true
 
 - name: Remove temporary kubeconfig
   ansible.builtin.file:
     path: /tmp/kubeconfig-cilium
     state: absent
   delegate_to: localhost
+  run_once: true
