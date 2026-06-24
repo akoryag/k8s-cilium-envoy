@@ -1,140 +1,165 @@
 # k8s-cilium-envoy
-1. Подготовка системы (НА ВСЕХ НОДАХ)
 
+Ansible-плейбук для развёртывания Kubernetes-кластера с Cilium (kube-proxy replacement) и Envoy ingress controller. Поддерживается HA control plane, зеркала репозиториев и образов для работы в ограниченной сети, предварительная загрузка образов.
 
-# Включаем нужные модули ядра
+## Что делает плейбук
 
-cat <<EOF | tee /etc/modules-load.d/k8s.conf
-overlay
-br_netfilter
-EOF
+1. **Подготовка всех нод** (`roles/common`) — отключение swap, модули ядра, sysctl, зеркала APT, Docker, containerd, Kubernetes, pre-pull образов.
+2. **Инициализация control plane** (`roles/init`) — `kubeadm init` на первом мастере с `--control-plane-endpoint`.
+3. **Присоединение нод** (`roles/join`) — дополнительные мастера (с `--control-plane`) и воркеры через `kubeadm join`.
+4. **Постконфигурация** (`roles/post-cluster`) — установка Cilium через Helm, удаление `kube-proxy`.
 
-modprobe overlay
-modprobe br_netfilter
+## Требования
 
+- Ansible 2.14+
+- Python 3 на управляющей машине
+- SSH-доступ к нодам (root или `become`)
+- `kubectl` и `helm` на машине, с которой запускается Ansible (для роли `post-cluster`)
 
+Установка коллекций:
 
-# sysctl настройки
+```bash
+ansible-galaxy collection install -r requirements.yml
+```
 
-cat <<EOF | tee /etc/sysctl.d/99-kubernetes.conf
-net.ipv4.ip_forward=1
-net.bridge.bridge-nf-call-iptables=1
-net.bridge.bridge-nf-call-ip6tables=1
-EOF
+## Быстрый старт
 
-sysctl --system
+### 1. Инвентарь
 
+Отредактируйте `inventory.ini`:
 
-2. Установка Docker
+```ini
+[master]
+master-1 ansible_host=10.10.10.30
+master-2 ansible_host=10.10.10.31
+master-3 ansible_host=10.10.10.32
 
-# Добавим gpg ключ
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+[workers]
+worker-1 ansible_host=10.10.10.40
+```
 
-echo \
-"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-https://download.docker.com/linux/ubuntu noble stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+### 2. Переменные
 
-# Обновляемся
-apt -y update
+Основные настройки в `group_vars/all.yml`:
 
-# Устанавливаем docker
-apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+| Переменная | По умолчанию | Описание |
+|---|---|---|
+| `k8s_version` | `1.35.4` | Версия Kubernetes |
+| `pod_cidr` | `10.244.0.0/16` | Pod network CIDR |
+| `control_plane_vip` | `10.10.10.30` | VIP или IP первого мастера для `--control-plane-endpoint` |
+| `cilium_version` | `1.19.3` | Версия Helm-чарта Cilium |
+| `repo_mirror` | `mirror.yandex.ru` | Зеркало APT и pkgs.k8s.io |
+| `k8s_image_repo` | `registry.aliyuncs.com/google_containers` | Репозиторий образов kubeadm |
+| `quay_image_repo` | `dockerhub.timeweb.cloud` | Зеркало образов Cilium |
 
-# Заставляем докер работать чуть иначе и ограничиваем размер логов до 100 мб:
-cat <<EOF > /etc/docker/daemon.json
-{
-   "exec-opts": ["native.cgroupdriver=systemd"],
-   "log-driver":"json-file",
-   "log-opts":{
-      "max-size":"100m",
-      "max-file":"1"
-   }
-}
-EOF
+### 3. Запуск
 
-# Настроим максимальный размер логов:
-echo 'SystemMaxUse=200M' >> /etc/systemd/journald.conf
+```bash
+ansible-playbook -i inventory.ini playbook.yml
+```
 
+Плейбук выполняется в четыре этапа:
 
-# Конфиг containerd
-containerd config default > /etc/containerd/config.toml
+| Этап | Хосты | Действие |
+|---|---|---|
+| Configure all hosts | `all` | Подготовка ОС, Docker, K8s, pre-pull образов |
+| Initialize control-plane | `master` (serial: 1) | `kubeadm init` + join остальных мастеров |
+| Join worker nodes | `workers` (serial: 1) | `kubeadm join` воркеров |
+| Post-cluster configuration | `master[0]` | Cilium + удаление kube-proxy |
 
-# Включаем systemd cgroup:
-sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-systemctl restart containerd
+## Архитектура кластера
 
-# Устанавливаем Kubernetes:
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.35/deb/Release.key | sudo gpg --dearmor -o /usr/share/keyrings/kubernetes-keyring.gpg
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/kubernetes-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.35/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
-apt -y update
-apt install -y kubelet kubeadm kubectl
+```
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│  master-1   │  │  master-2   │  │  master-3   │
+│ (init)      │  │ (join CP)   │  │ (join CP)   │
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │
+       └────────────────┼────────────────┘
+                        │ control-plane-endpoint (VIP)
+              ┌─────────┴─────────┐
+              │     workers       │
+              └───────────────────┘
+                        │
+              ┌─────────┴─────────┐
+              │ Cilium + Envoy    │
+              │ (kube-proxy off)  │
+              └───────────────────┘
+```
 
+Cilium устанавливается с параметрами:
 
-4. Инициализация MASTER-ноды
+- `kubeProxyReplacement: true` — полная замена kube-proxy
+- `ingressController.enabled: true`, `loadbalancerMode: dedicated`
+- `envoy.enabled: true`
 
-kubeadm init \
-  --pod-network-cidr=10.244.0.0/16
+После установки Cilium DaemonSet `kube-proxy` удаляется из `kube-system`.
 
+## Структура проекта
 
-# Настройка kubectl
-mkdir -p $HOME/.kube
-cp /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config
+```
+.
+├── playbook.yml              # Главный плейбук
+├── inventory.ini             # Инвентарь нод
+├── group_vars/all.yml        # Переменные кластера
+├── requirements.yml          # Ansible-коллекции
+├── roles/
+│   ├── common/               # Подготовка ОС, Docker, K8s, pre-pull
+│   ├── init/                 # kubeadm init на первом мастере
+│   ├── join/                 # Присоединение мастеров и воркеров
+│   └── post-cluster/         # Cilium через Helm, удаление kube-proxy
+├── packer/                   # Сборка QCOW2-образа с предустановкой
+│   ├── ubuntu-qcow.pkr.hcl
+│   └── cloud-init/
+└── lb-redirect.yaml          # HAProxy для редиректа 80/443 → Envoy (ручное применение)
+```
 
-5. Подключение WORKER-нод
+## Сборка образа (Packer)
 
-# После kubeadm init тебе покажут команду вида:
+В каталоге `packer/` есть конфигурация для создания QCOW2-образа Ubuntu 24.04 с предустановленным плейбуком:
 
-kubeadm join <IP>:6443 --token ... --discovery-token-ca-cert-hash ...
+```bash
+cd packer
+packer init ubuntu-qcow.pkr.hcl
+packer build ubuntu-qcow.pkr.hcl
+```
 
-6. Установка Cilium + Envoy
+Образ собирается через QEMU/KVM, cloud-init задаёт пользователя `ubuntu`, затем выполняется `ansible-local` с `playbook.yml`.
 
-# Установка CLI
+## Дополнительные ресурсы
 
-curl -L --remote-name https://github.com/cilium/cilium-cli/releases/latest/download/cilium-linux-amd64.tar.gz
-tar xzvf cilium-linux-amd64.tar.gz
-mv cilium /usr/local/bin/
+### lb-redirect.yaml
 
+Манифест HAProxy в `hostNetwork` для перенаправления трафика с портов 80/443 на Envoy (`127.0.0.1:8080`). Требует метку ноды `role=ingress`. Применяется вручную:
 
-# Посмотрите список нод
-kubectl get nodes
+```bash
+kubectl apply -f lb-redirect.yaml
+```
 
-# Добавьте метку (замените <node-name> на имя вашей ноды)
-kubectl label node <node-name> node-role.kubernetes.io/ingress=""
+### Зеркала образов
 
-# Установка Cilium
-cilium install \
-  --set kubeProxyReplacement=true \
-  --set ingressController.enabled=true \
-  --set ingressController.loadbalancerMode=shared \
-  --set ingressController.hostNetwork.enabled=true \
-  --set ingressController.hostNetwork.nodes.matchLabels.role=ingress \
-  --set envoy.enabled=true \
-  --set envoy.nodeSelector.role=ingress
+Для ускорения развёртывания в закрытых сетях плейбук:
 
-  7. Удаляем kube-proxy (ВАЖНО)
-  kubectl -n kube-system delete ds kube-proxy
+- переключает APT на `mirror.yandex.ru`
+- использует зеркала Docker registry (`mirror.gcr.io`, `dockerhub.timeweb.cloud`)
+- pre-pull образов Kubernetes (на мастерах) и Cilium (на всех нодах) до `kubeadm init`
 
+Список образов Cilium задаётся в `cilium_images` в `group_vars/all.yml`.
 
-cilium install \
-  --set kubeProxyReplacement=true \
-  --set ingressController.enabled=true \
-  --set ingressController.loadbalancerMode=dedicated \
-  --set envoy.enabled=true \
-  --set envoy.image.repository=quay.m.daocloud.io/cilium/cilium-envoy \
-  --set image.repository="quay.m.daocloud.io/cilium/cilium" \
-  --set operator.image.repository="quay.m.daocloud.io/cilium/operator" \
-  --set hubble.relay.image.repository="quay.m.daocloud.io/cilium/hubble-relay"
+## Полезные команды
 
-https://github.com/kubernetes-sigs/kubespray/blob/master/docs/operations/mirror.md
-
+```bash
+# Создать новый join-токен
 kubeadm token create --print-join-command
+
+# Загрузить сертификаты для join control-plane
 kubeadm init phase upload-certs --upload-certs
---control-plane --certificate-key
 
+# Статус Cilium
+kubectl -n kube-system rollout status daemonset cilium
+```
 
-cilium install \
-  --set kubeProxyReplacement=true \
-  --set ingressController.enabled=true \
-  --set ingressController.loadbalancerMode=dedicated \
-  --set envoy.enabled=true 
+## Ссылки
+
+- [Kubespray: mirror operations](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/operations/mirror.md)
+- [Cilium Helm installation](https://docs.cilium.io/en/stable/installation/k8s-install-helm/)
