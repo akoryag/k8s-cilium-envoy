@@ -61,3 +61,9 @@
 
 - name: Install Kubernetes
   ansible.builtin.import_tasks: k8s.yml
+
+- name: Apply pending service restarts before image pull
+  ansible.builtin.meta: flush_handlers
+
+- name: Pre-pull Kubernetes images on masters
+  ansible.builtin.import_tasks: k8s-images.yml

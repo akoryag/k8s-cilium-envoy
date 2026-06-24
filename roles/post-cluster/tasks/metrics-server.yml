@@ -2,7 +2,7 @@
 - name: Fetch kubeconfig
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
-    dest: /tmp/kubeconfig-master
+    dest: "{{ kubeconfig_local_path }}"
     flat: true
   delegate_to: "{{ groups['master'][0] }}"
   run_once: true
@@ -12,13 +12,14 @@
     argv:
       - kubectl
       - --kubeconfig
-      - /tmp/kubeconfig-master
+      - "{{ kubeconfig_local_path }}"
       - -n
       - kube-system
       - get
       - deployment
       - metrics-server
   register: _metrics_installed
+  delegate_to: localhost
   failed_when: false
   changed_when: false
   run_once: true
@@ -28,7 +29,7 @@
   kubernetes.core.helm_repository:
     name: metrics-server
     repo_url: https://kubernetes-sigs.github.io/metrics-server/
-    kubeconfig: /tmp/kubeconfig-master
+    kubeconfig: "{{ kubeconfig_local_path }}"
   delegate_to: localhost
   run_once: true
 
@@ -38,13 +39,17 @@
     name: metrics-server
     chart_ref: metrics-server/metrics-server
     release_namespace: kube-system
-    kubeconfig: /tmp/kubeconfig-master
+    kubeconfig: "{{ kubeconfig_local_path }}"
     values:
       image:
-        repository: "{{ k8s_image_repo }}/metrics-server/metrics-server"
+        repository: "{{ metrics_server_image_repo }}/metrics-server/metrics-server"
       args:
         - --kubelet-insecure-tls
   delegate_to: localhost
+  register: _metrics_helm
+  until: _metrics_helm is succeeded
+  retries: 3
+  delay: 30
   run_once: true
 
 - name: Wait for metrics-server deployment
@@ -53,21 +58,21 @@
     argv:
       - kubectl
       - --kubeconfig
-      - /tmp/kubeconfig-master
+      - "{{ kubeconfig_local_path }}"
       - -n
       - kube-system
       - rollout
       - status
       - deployment
       - metrics-server
+      - --timeout=300s
   delegate_to: localhost
-  register: _metrics_rollout
   changed_when: false
   run_once: true
 
 - name: Remove temporary kubeconfig
   ansible.builtin.file:
-    path: /tmp/kubeconfig-master
+    path: "{{ kubeconfig_local_path }}"
     state: absent
   delegate_to: localhost
   run_once: true

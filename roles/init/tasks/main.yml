@@ -11,6 +11,10 @@
           - "--image-repository={{ k8s_image_repo }}"
           - "--kubernetes-version={{ k8s_version }}"
           - "--control-plane-endpoint={{ control_plane_endpoint }}"
+      register: _kubeadm_init
+      until: _kubeadm_init.rc == 0
+      retries: 3
+      delay: 30
       args:
         creates: /etc/kubernetes/admin.conf
 

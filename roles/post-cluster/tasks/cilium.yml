@@ -2,8 +2,9 @@
 - name: Fetch kubeconfig
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
-    dest: /tmp/kubeconfig-cilium
+    dest: "{{ kubeconfig_local_path }}"
     flat: true
+  delegate_to: "{{ groups['master'][0] }}"
   run_once: true
 
 - name: Check if Cilium is already installed
@@ -11,13 +12,14 @@
     argv:
       - kubectl
       - --kubeconfig
-      - /tmp/kubeconfig-cilium
+      - "{{ kubeconfig_local_path }}"
       - -n
       - kube-system
       - get
       - ds
       - cilium
   register: _cilium_installed
+  delegate_to: localhost
   failed_when: false
   changed_when: false
   run_once: true
@@ -27,7 +29,7 @@
   kubernetes.core.helm_repository:
     name: cilium
     repo_url: https://helm.cilium.io/
-    kubeconfig: /tmp/kubeconfig-cilium
+    kubeconfig: "{{ kubeconfig_local_path }}"
   delegate_to: localhost
   run_once: true
 
@@ -38,7 +40,7 @@
     chart_ref: cilium/cilium
     chart_version: 1.19.3
     release_namespace: kube-system
-    kubeconfig: /tmp/kubeconfig-cilium
+    kubeconfig: "{{ kubeconfig_local_path }}"
     values:
       kubeProxyReplacement: true
       ingressController:
@@ -59,12 +61,44 @@
           image:
             repository: "{{ quay_image_repo }}/cilium/hubble-relay"
   delegate_to: localhost
+  register: _cilium_helm
+  until: _cilium_helm is succeeded
+  retries: 3
+  delay: 30
+  run_once: true
+
+- name: Wait for Cilium DaemonSet rollout
+  when: _cilium_installed.rc != 0
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_local_path }}"
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - daemonset
+      - cilium
+      - --timeout=600s
+  delegate_to: localhost
+  changed_when: false
   run_once: true
 
 - name: Delete kube-proxy DaemonSet
   when: _cilium_installed.rc != 0
-  ansible.builtin.command: kubectl -n kube-system delete ds kube-proxy
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_local_path }}"
+      - -n
+      - kube-system
+      - delete
+      - ds
+      - kube-proxy
   register: _init_delete_proxy
+  delegate_to: localhost
   failed_when:
     - _init_delete_proxy.rc != 0
     - '"not found" not in _init_delete_proxy.stderr'
@@ -73,7 +107,7 @@
 
 - name: Remove temporary kubeconfig
   ansible.builtin.file:
-    path: /tmp/kubeconfig-cilium
+    path: "{{ kubeconfig_local_path }}"
     state: absent
   delegate_to: localhost
   run_once: true

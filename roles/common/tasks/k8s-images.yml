@@ -1,0 +1,16 @@
+---
+- name: Pre-pull Kubernetes control plane images
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - config
+      - images
+      - pull
+      - "--image-repository={{ k8s_image_repo }}"
+      - "--kubernetes-version={{ k8s_version }}"
+  register: _k8s_images_pull
+  until: _k8s_images_pull.rc == 0
+  retries: 5
+  delay: 30
+  changed_when: false
+  when: inventory_hostname in groups['master']

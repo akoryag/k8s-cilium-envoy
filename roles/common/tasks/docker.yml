@@ -31,7 +31,8 @@
         "log-opts": {
           "max-size": "100m",
           "max-file": "1"
-        }
+        },
+        "registry-mirrors": {{ docker_registry_mirrors | to_json }}
       }
     mode: "0644"
   notify: Restart docker

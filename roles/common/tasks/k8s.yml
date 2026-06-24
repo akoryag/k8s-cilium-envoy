@@ -29,3 +29,9 @@
     - kubelet
     - kubeadm
     - kubectl
+
+- name: Enable and start kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: true
+    state: started
