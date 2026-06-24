@@ -2,5 +2,5 @@
 - name: Install Cilium
   ansible.builtin.import_tasks: cilium.yml
 
-- name: Install metrics-server
-  ansible.builtin.import_tasks: metrics-server.yml
+# - name: Install metrics-server
+#   ansible.builtin.import_tasks: metrics-server.yml

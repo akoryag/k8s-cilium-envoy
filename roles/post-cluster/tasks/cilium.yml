@@ -38,9 +38,10 @@
   kubernetes.core.helm:
     name: cilium
     chart_ref: cilium/cilium
-    chart_version: 1.19.3
+    chart_version: "{{ cilium_version }}"
     release_namespace: kube-system
     kubeconfig: "{{ kubeconfig_local_path }}"
+    wait: false
     values:
       kubeProxyReplacement: true
       ingressController:
@@ -49,17 +50,18 @@
       envoy:
         enabled: true
         image:
-          repository: "{{ quay_image_repo }}/cilium/cilium-envoy"
+          repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium-envoy"
+          useDigest: false
       image:
-        repository: "{{ quay_image_repo }}/cilium/cilium"
+        repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium"
+        useDigest: false
       operator:
         replicas: 1
         image:
-          repository: "{{ quay_image_repo }}/cilium/operator"
+          repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-operator"
+          useDigest: false
       hubble:
-        relay:
-          image:
-            repository: "{{ quay_image_repo }}/cilium/hubble-relay"
+        enabled: "{{ cilium_hubble_enabled }}"
   delegate_to: localhost
   register: _cilium_helm
   until: _cilium_helm is succeeded
@@ -80,7 +82,7 @@
       - status
       - daemonset
       - cilium
-      - --timeout=600s
+      - "--timeout={{ cilium_rollout_timeout }}"
   delegate_to: localhost
   changed_when: false
   run_once: true

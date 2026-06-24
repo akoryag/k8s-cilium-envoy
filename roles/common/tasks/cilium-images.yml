@@ -1,0 +1,31 @@
+---
+- name: Check which Cilium images are already present locally
+  ansible.builtin.shell: |
+    crictl inspecti "{{ item }}" >/dev/null 2>&1
+  args:
+    executable: /bin/bash
+  loop: "{{ cilium_images }}"
+  register: _cilium_images_check
+  failed_when: false
+  changed_when: false
+
+- name: Determine missing Cilium images
+  ansible.builtin.set_fact:
+    _cilium_images_missing: "{{ _cilium_images_check.results | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+
+- name: Pre-pull missing Cilium images
+  ansible.builtin.command:
+    argv:
+      - ctr
+      - -n
+      - k8s.io
+      - images
+      - pull
+      - "{{ item }}"
+  loop: "{{ _cilium_images_missing }}"
+  when: _cilium_images_missing | length > 0
+  register: _cilium_images_pull
+  until: _cilium_images_pull.rc == 0
+  retries: 3
+  delay: 10
+  changed_when: false
