@@ -49,7 +49,7 @@ worker-1 ansible_host=10.10.10.40
 | `cilium_version` | `1.19.3` | Версия Helm-чарта Cilium |
 | `repo_mirror` | `mirror.yandex.ru` | Зеркало APT и pkgs.k8s.io |
 | `k8s_image_repo` | `registry.aliyuncs.com/google_containers` | Репозиторий образов kubeadm |
-| `quay_image_repo` | `dockerhub.timeweb.cloud` | Зеркало образов Cilium |
+| `docker_image_repo` | `dockerhub.timeweb.cloud` | Зеркало образов Cilium |
 
 ### 3. Запуск
 

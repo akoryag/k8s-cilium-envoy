@@ -14,7 +14,7 @@ cilium_helm_values:
     useDigest: false
   operator:
     image:
-      repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-operator"
+      repository: "{{ cilium_operator_image }}"
       useDigest: false
   hubble:
     enabled: "{{ cilium_hubble_enabled }}"
@@ -23,3 +23,7 @@ cilium_helm_values:
   k8sClientRateLimit:
     qps: "{{ cilium_k8s_client_rate_limit_qps }}"
     burst: "{{ cilium_k8s_client_rate_limit_burst }}"
+
+longhorn_helm_values:
+  global:
+    imageRegistry: "{{ docker_image_repo }}"

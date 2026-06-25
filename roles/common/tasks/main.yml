@@ -65,6 +65,9 @@
 - name: Apply pending service restarts before image pull
   ansible.builtin.meta: flush_handlers
 
+- name: Prepare OS for Longhorn
+  ansible.builtin.import_tasks: longhorn-os.yml
+
 - name: Pre-pull Kubernetes images on masters
   ansible.builtin.import_tasks: k8s-images.yml
   when: inventory_hostname in groups['master']

@@ -17,7 +17,7 @@ docker_registry_mirrors:
   - "https://mirror.gcr.io"
   - "https://dockerhub.timeweb.cloud"
 k8s_image_repo: "registry.aliyuncs.com/google_containers"
-quay_image_repo: "dockerhub.timeweb.cloud"
+docker_image_repo: "dockerhub.timeweb.cloud"
 ### CILIUM
 cilium_version: "1.19.3"
 cilium_envoy_version: "1.36.6-1776000132-2437d2edeaf4d9b56ef279bd0d71127440c067aa"
@@ -32,6 +32,10 @@ cilium_lb_ip_pool_stop: "10.10.10.220"
 cilium_l2_announcement_policy_name: lb-pool-l2
 cilium_l2_interfaces:
   - eth0
-cilium_image: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium"
-cilium_envoy_image: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium-envoy"
-cilium_operator_image: "{{ quay_image_repo }}/rancher/mirrored-cilium-operator-generic"
+cilium_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium"
+cilium_envoy_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium-envoy"
+cilium_operator_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-operator"
+### LONGHORN
+longhorn_version: "1.12.0"
+longhorn_namespace: longhorn-system
+longhorn_rollout_timeout: "600s"

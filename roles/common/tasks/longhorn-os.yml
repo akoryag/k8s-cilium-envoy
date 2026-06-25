@@ -1,0 +1,21 @@
+---
+- name: Install Longhorn OS packages
+  ansible.builtin.apt:
+    name: "{{ longhorn_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Load and persist Longhorn kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  loop: "{{ longhorn_kernel_modules }}"
+
+- name: Enable and start Longhorn services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: "{{ longhorn_services }}"
