@@ -1,0 +1,93 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-app-content
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+      <head><title>Cilium Ingress Test</title></head>
+      <body><h1>Hello from Cilium Ingress</h1></body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-app
+  namespace: default
+  labels:
+    app: hello-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-app
+  template:
+    metadata:
+      labels:
+        app: hello-app
+    spec:
+      containers:
+        - name: hello-app
+          image: mirror.gcr.io/busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - cp /config/index.html /www/index.html && httpd -f -p 8080 -h /www
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 1
+            periodSeconds: 5
+          volumeMounts:
+            - name: content
+              mountPath: /config
+            - name: www
+              mountPath: /www
+      volumes:
+        - name: content
+          configMap:
+            name: hello-app-content
+        - name: www
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-app
+  namespace: default
+  labels:
+    app: hello-app
+spec:
+  selector:
+    app: hello-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-app
+  namespace: default
+  annotations:
+    ingress.cilium.io/loadbalancer-mode: shared
+spec:
+  ingressClassName: cilium
+  rules:
+    - host: hello.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-app
+                port:
+                  number: 80

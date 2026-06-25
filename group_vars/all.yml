@@ -14,11 +14,21 @@ docker_registry_mirrors:
   - "https://mirror.gcr.io"
   - "https://dockerhub.timeweb.cloud"
 k8s_image_repo: "registry.aliyuncs.com/google_containers"
+
 quay_image_repo: "dockerhub.timeweb.cloud"
 cilium_version: "1.19.3"
 cilium_envoy_version: "1.36.6-1776000132-2437d2edeaf4d9b56ef279bd0d71127440c067aa"
 cilium_rollout_timeout: "600s"
 cilium_hubble_enabled: false
+cilium_l2_announcements_enabled: true
+cilium_k8s_client_rate_limit_qps: 10
+cilium_k8s_client_rate_limit_burst: 20
+cilium_lb_ip_pool_name: lb-pool-default
+cilium_lb_ip_pool_start: "10.10.10.200"
+cilium_lb_ip_pool_stop: "10.10.10.220"
+cilium_l2_announcement_policy_name: lb-pool-l2
+cilium_l2_interfaces:
+  - eth0
 cilium_images:
   - "{{ quay_image_repo }}/rancher/mirrored-cilium-operator-generic:v{{ cilium_version }}"
   - "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium:v{{ cilium_version }}"

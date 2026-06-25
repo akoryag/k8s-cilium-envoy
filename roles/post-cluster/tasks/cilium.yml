@@ -25,7 +25,6 @@
   run_once: true
 
 - name: Add Cilium helm repo
-  when: _cilium_installed.rc != 0
   kubernetes.core.helm_repository:
     name: cilium
     repo_url: https://helm.cilium.io/
@@ -33,8 +32,7 @@
   delegate_to: localhost
   run_once: true
 
-- name: Install Cilium
-  when: _cilium_installed.rc != 0
+- name: Install or upgrade Cilium
   kubernetes.core.helm:
     name: cilium
     chart_ref: cilium/cilium
@@ -55,13 +53,18 @@
       image:
         repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium"
         useDigest: false
-      operator:
-        replicas: 1
+      # operator:
+      #   replicas: 1
         image:
           repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-operator"
           useDigest: false
       hubble:
         enabled: "{{ cilium_hubble_enabled }}"
+      l2announcements:
+        enabled: "{{ cilium_l2_announcements_enabled }}"
+      k8sClientRateLimit:
+        qps: "{{ cilium_k8s_client_rate_limit_qps }}"
+        burst: "{{ cilium_k8s_client_rate_limit_burst }}"
   delegate_to: localhost
   register: _cilium_helm
   until: _cilium_helm is succeeded
@@ -70,7 +73,7 @@
   run_once: true
 
 - name: Wait for Cilium DaemonSet rollout
-  when: _cilium_installed.rc != 0
+  when: _cilium_helm is changed
   ansible.builtin.command:
     argv:
       - kubectl
@@ -105,6 +108,65 @@
     - _init_delete_proxy.rc != 0
     - '"not found" not in _init_delete_proxy.stderr'
   changed_when: _init_delete_proxy.rc == 0
+  run_once: true
+
+- name: Render Cilium LoadBalancer IP pool manifest
+  when: cilium_l2_announcements_enabled
+  ansible.builtin.template:
+    src: cilium-lb-ip-pool.yaml.j2
+    dest: "{{ kubeconfig_local_path | dirname }}/cilium-lb-ip-pool.yaml"
+    mode: "0644"
+  delegate_to: localhost
+  run_once: true
+
+- name: Apply Cilium LoadBalancer IP pool
+  when: cilium_l2_announcements_enabled
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_local_path }}"
+      - apply
+      - -f
+      - "{{ kubeconfig_local_path | dirname }}/cilium-lb-ip-pool.yaml"
+  delegate_to: localhost
+  register: _cilium_lb_ip_pool
+  changed_when: "'configured' in _cilium_lb_ip_pool.stdout or 'created' in _cilium_lb_ip_pool.stdout"
+  run_once: true
+
+- name: Render Cilium L2 announcement policy manifest
+  when: cilium_l2_announcements_enabled
+  ansible.builtin.template:
+    src: cilium-l2-announcement-policy.yaml.j2
+    dest: "{{ kubeconfig_local_path | dirname }}/cilium-l2-announcement-policy.yaml"
+    mode: "0644"
+  delegate_to: localhost
+  run_once: true
+
+- name: Apply Cilium L2 announcement policy
+  when: cilium_l2_announcements_enabled
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_local_path }}"
+      - apply
+      - -f
+      - "{{ kubeconfig_local_path | dirname }}/cilium-l2-announcement-policy.yaml"
+  delegate_to: localhost
+  register: _cilium_l2_policy
+  changed_when: "'configured' in _cilium_l2_policy.stdout or 'created' in _cilium_l2_policy.stdout"
+  run_once: true
+
+- name: Remove rendered Cilium L2 manifests
+  when: cilium_l2_announcements_enabled
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ kubeconfig_local_path | dirname }}/cilium-lb-ip-pool.yaml"
+    - "{{ kubeconfig_local_path | dirname }}/cilium-l2-announcement-policy.yaml"
+  delegate_to: localhost
   run_once: true
 
 - name: Remove temporary kubeconfig
