@@ -1,0 +1,5 @@
+---
+cilium_images:
+  - "{{ cilium_image }}:v{{ cilium_version }}"
+  - "{{ cilium_operator_image }}:v{{ cilium_version }}"
+  - "{{ cilium_envoy_image }}:v{{ cilium_envoy_version }}"

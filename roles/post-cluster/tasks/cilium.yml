@@ -40,31 +40,7 @@
     release_namespace: kube-system
     kubeconfig: "{{ kubeconfig_local_path }}"
     wait: false
-    values:
-      kubeProxyReplacement: true
-      ingressController:
-        enabled: true
-        loadbalancerMode: dedicated
-      envoy:
-        enabled: true
-        image:
-          repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium-envoy"
-          useDigest: false
-      image:
-        repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-cilium"
-        useDigest: false
-      # operator:
-      #   replicas: 1
-        image:
-          repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-operator"
-          useDigest: false
-      hubble:
-        enabled: "{{ cilium_hubble_enabled }}"
-      l2announcements:
-        enabled: "{{ cilium_l2_announcements_enabled }}"
-      k8sClientRateLimit:
-        qps: "{{ cilium_k8s_client_rate_limit_qps }}"
-        burst: "{{ cilium_k8s_client_rate_limit_burst }}"
+    values: "{{ cilium_helm_values }}"
   delegate_to: localhost
   register: _cilium_helm
   until: _cilium_helm is succeeded

@@ -1,0 +1,25 @@
+---
+cilium_helm_values:
+  kubeProxyReplacement: true
+  ingressController:
+    enabled: true
+    loadbalancerMode: dedicated
+  envoy:
+    enabled: true
+    image:
+      repository: "{{ cilium_envoy_image }}"
+      useDigest: false
+  image:
+    repository: "{{ cilium_image }}"
+    useDigest: false
+  operator:
+    image:
+      repository: "{{ quay_image_repo }}/rancher/mirrored-cilium-operator"
+      useDigest: false
+  hubble:
+    enabled: "{{ cilium_hubble_enabled }}"
+  l2announcements:
+    enabled: "{{ cilium_l2_announcements_enabled }}"
+  k8sClientRateLimit:
+    qps: "{{ cilium_k8s_client_rate_limit_qps }}"
+    burst: "{{ cilium_k8s_client_rate_limit_burst }}"
