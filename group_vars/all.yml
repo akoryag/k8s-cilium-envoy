@@ -1,10 +1,13 @@
 ---
 ubuntu_codename: "noble"
 k8s_version: "1.35.4"
+helm_version: "3.17.2"
+helm_diff_version: "3.4.1"
 k8s_minor: "{{ k8s_version.split('.')[:2] | join('.') }}"
 pod_cidr: "10.244.0.0/16"
 control_plane_port: "6443"
-kubeconfig_local_path: "/tmp/kubeconfig-ansible"
+kubeconfig_path: /etc/kubernetes/admin.conf
+manifests_dir: /opt/manifests
 control_plane_vip: "10.10.10.30"
 control_plane_endpoint: "{{ control_plane_vip }}:{{ control_plane_port }}"
 ### MIRRORS
@@ -14,8 +17,8 @@ docker_registry_mirrors:
   - "https://mirror.gcr.io"
   - "https://dockerhub.timeweb.cloud"
 k8s_image_repo: "registry.aliyuncs.com/google_containers"
-
 quay_image_repo: "dockerhub.timeweb.cloud"
+### CILIUM
 cilium_version: "1.19.3"
 cilium_envoy_version: "1.36.6-1776000132-2437d2edeaf4d9b56ef279bd0d71127440c067aa"
 cilium_rollout_timeout: "600s"

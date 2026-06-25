@@ -14,7 +14,6 @@ Ansible-плейбук для развёртывания Kubernetes-класте
 - Ansible 2.14+
 - Python 3 на управляющей машине
 - SSH-доступ к нодам (root или `become`)
-- `kubectl` и `helm` на машине, с которой запускается Ansible (для роли `post-cluster`)
 
 Установка коллекций:
 

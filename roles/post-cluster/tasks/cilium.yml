@@ -1,9 +1,9 @@
 ---
-- name: Fetch kubeconfig
-  ansible.builtin.fetch:
-    src: /etc/kubernetes/admin.conf
-    dest: "{{ kubeconfig_local_path }}"
-    flat: true
+- name: Ensure Cilium manifest directory exists
+  ansible.builtin.file:
+    path: "{{ manifests_dir }}/cilium"
+    state: directory
+    mode: "0755"
   delegate_to: "{{ groups['master'][0] }}"
   run_once: true
 
@@ -12,14 +12,14 @@
     argv:
       - kubectl
       - --kubeconfig
-      - "{{ kubeconfig_local_path }}"
+      - "{{ kubeconfig_path }}"
       - -n
       - kube-system
       - get
       - ds
       - cilium
   register: _cilium_installed
-  delegate_to: localhost
+  delegate_to: "{{ groups['master'][0] }}"
   failed_when: false
   changed_when: false
   run_once: true
@@ -28,8 +28,8 @@
   kubernetes.core.helm_repository:
     name: cilium
     repo_url: https://helm.cilium.io/
-    kubeconfig: "{{ kubeconfig_local_path }}"
-  delegate_to: localhost
+    kubeconfig: "{{ kubeconfig_path }}"
+  delegate_to: "{{ groups['master'][0] }}"
   run_once: true
 
 - name: Install or upgrade Cilium
@@ -38,10 +38,10 @@
     chart_ref: cilium/cilium
     chart_version: "{{ cilium_version }}"
     release_namespace: kube-system
-    kubeconfig: "{{ kubeconfig_local_path }}"
+    kubeconfig: "{{ kubeconfig_path }}"
     wait: false
     values: "{{ cilium_helm_values }}"
-  delegate_to: localhost
+  delegate_to: "{{ groups['master'][0] }}"
   register: _cilium_helm
   until: _cilium_helm is succeeded
   retries: 3
@@ -54,7 +54,7 @@
     argv:
       - kubectl
       - --kubeconfig
-      - "{{ kubeconfig_local_path }}"
+      - "{{ kubeconfig_path }}"
       - -n
       - kube-system
       - rollout
@@ -62,7 +62,7 @@
       - daemonset
       - cilium
       - "--timeout={{ cilium_rollout_timeout }}"
-  delegate_to: localhost
+  delegate_to: "{{ groups['master'][0] }}"
   changed_when: false
   run_once: true
 
@@ -72,14 +72,14 @@
     argv:
       - kubectl
       - --kubeconfig
-      - "{{ kubeconfig_local_path }}"
+      - "{{ kubeconfig_path }}"
       - -n
       - kube-system
       - delete
       - ds
       - kube-proxy
   register: _init_delete_proxy
-  delegate_to: localhost
+  delegate_to: "{{ groups['master'][0] }}"
   failed_when:
     - _init_delete_proxy.rc != 0
     - '"not found" not in _init_delete_proxy.stderr'
@@ -90,9 +90,9 @@
   when: cilium_l2_announcements_enabled
   ansible.builtin.template:
     src: cilium-lb-ip-pool.yaml.j2
-    dest: "{{ kubeconfig_local_path | dirname }}/cilium-lb-ip-pool.yaml"
+    dest: "{{ manifests_dir }}/cilium/cilium-lb-ip-pool.yaml"
     mode: "0644"
-  delegate_to: localhost
+  delegate_to: "{{ groups['master'][0] }}"
   run_once: true
 
 - name: Apply Cilium LoadBalancer IP pool
@@ -101,11 +101,11 @@
     argv:
       - kubectl
       - --kubeconfig
-      - "{{ kubeconfig_local_path }}"
+      - "{{ kubeconfig_path }}"
       - apply
       - -f
-      - "{{ kubeconfig_local_path | dirname }}/cilium-lb-ip-pool.yaml"
-  delegate_to: localhost
+      - "{{ manifests_dir }}/cilium/cilium-lb-ip-pool.yaml"
+  delegate_to: "{{ groups['master'][0] }}"
   register: _cilium_lb_ip_pool
   changed_when: "'configured' in _cilium_lb_ip_pool.stdout or 'created' in _cilium_lb_ip_pool.stdout"
   run_once: true
@@ -114,9 +114,9 @@
   when: cilium_l2_announcements_enabled
   ansible.builtin.template:
     src: cilium-l2-announcement-policy.yaml.j2
-    dest: "{{ kubeconfig_local_path | dirname }}/cilium-l2-announcement-policy.yaml"
+    dest: "{{ manifests_dir }}/cilium/cilium-l2-announcement-policy.yaml"
     mode: "0644"
-  delegate_to: localhost
+  delegate_to: "{{ groups['master'][0] }}"
   run_once: true
 
 - name: Apply Cilium L2 announcement policy
@@ -125,29 +125,11 @@
     argv:
       - kubectl
       - --kubeconfig
-      - "{{ kubeconfig_local_path }}"
+      - "{{ kubeconfig_path }}"
       - apply
       - -f
-      - "{{ kubeconfig_local_path | dirname }}/cilium-l2-announcement-policy.yaml"
-  delegate_to: localhost
+      - "{{ manifests_dir }}/cilium/cilium-l2-announcement-policy.yaml"
+  delegate_to: "{{ groups['master'][0] }}"
   register: _cilium_l2_policy
   changed_when: "'configured' in _cilium_l2_policy.stdout or 'created' in _cilium_l2_policy.stdout"
-  run_once: true
-
-- name: Remove rendered Cilium L2 manifests
-  when: cilium_l2_announcements_enabled
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - "{{ kubeconfig_local_path | dirname }}/cilium-lb-ip-pool.yaml"
-    - "{{ kubeconfig_local_path | dirname }}/cilium-l2-announcement-policy.yaml"
-  delegate_to: localhost
-  run_once: true
-
-- name: Remove temporary kubeconfig
-  ansible.builtin.file:
-    path: "{{ kubeconfig_local_path }}"
-    state: absent
-  delegate_to: localhost
   run_once: true
