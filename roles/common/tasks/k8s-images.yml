@@ -21,20 +21,23 @@
   failed_when: false
   changed_when: false
 
-- name: Determine missing Kubernetes control plane images
+- name: Determine missing Kubernetes images
   ansible.builtin.set_fact:
     _k8s_images_missing: "{{ _k8s_images_check.results | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
 
-- name: Pre-pull missing Kubernetes control plane images
+- name: Pre-pull missing Kubernetes images
   ansible.builtin.command:
     argv:
-      - crictl
+      - ctr
+      - -n
+      - k8s.io
+      - images
       - pull
       - "{{ item }}"
   loop: "{{ _k8s_images_missing }}"
   when: _k8s_images_missing | length > 0
   register: _k8s_images_pull
   until: _k8s_images_pull.rc == 0
-  retries: 5
-  delay: 30
+  retries: 3
+  delay: 10
   changed_when: false
