@@ -27,3 +27,23 @@ cilium_helm_values:
 longhorn_helm_values:
   global:
     imageRegistry: "{{ docker_image_repo }}"
+
+cert_manager_helm_values:
+  crds:
+    enabled: true
+  image:
+    repository: "{{ cert_manager_image_repo }}/jetstack/cert-manager-controller"
+  webhook:
+    image:
+      repository: "{{ cert_manager_image_repo }}/jetstack/cert-manager-webhook"
+  cainjector:
+    image:
+      repository: "{{ cert_manager_image_repo }}/jetstack/cert-manager-cainjector"
+  acmesolver:
+    image:
+      repository: "{{ cert_manager_image_repo }}/jetstack/cert-manager-acmesolver"
+  startupapicheck:
+    image:
+      repository: "{{ cert_manager_image_repo }}/jetstack/cert-manager-startupapicheck"
+
+cloudnativepg_helm_values: {}

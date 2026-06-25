@@ -1,0 +1,43 @@
+---
+- name: Add CloudNativePG helm repo
+  kubernetes.core.helm_repository:
+    name: cnpg
+    repo_url: https://cloudnative-pg.github.io/charts
+    kubeconfig: "{{ kubeconfig_path }}"
+  delegate_to: "{{ groups['master'][0] }}"
+  run_once: true
+
+- name: Install or upgrade CloudNativePG operator
+  kubernetes.core.helm:
+    name: cnpg
+    chart_ref: cnpg/cloudnative-pg
+    chart_version: "{{ cloudnativepg_version }}"
+    release_namespace: "{{ cloudnativepg_namespace }}"
+    create_namespace: true
+    kubeconfig: "{{ kubeconfig_path }}"
+    wait: false
+    values: "{{ cloudnativepg_helm_values }}"
+  delegate_to: "{{ groups['master'][0] }}"
+  register: _cloudnativepg_helm
+  until: _cloudnativepg_helm is succeeded
+  retries: 3
+  delay: 30
+  run_once: true
+
+- name: Wait for CloudNativePG operator rollout
+  when: _cloudnativepg_helm is changed
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_path }}"
+      - -n
+      - "{{ cloudnativepg_namespace }}"
+      - rollout
+      - status
+      - deployment
+      - cnpg-cloudnative-pg
+      - "--timeout={{ cloudnativepg_rollout_timeout }}"
+  delegate_to: "{{ groups['master'][0] }}"
+  changed_when: false
+  run_once: true

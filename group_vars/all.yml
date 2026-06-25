@@ -18,6 +18,7 @@ docker_registry_mirrors:
   - "https://dockerhub.timeweb.cloud"
 k8s_image_repo: "registry.aliyuncs.com/google_containers"
 docker_image_repo: "dockerhub.timeweb.cloud"
+quay_image_repo: "quay.m.daocloud.io"
 ### CILIUM
 cilium_version: "1.19.3"
 cilium_envoy_version: "1.36.6-1776000132-2437d2edeaf4d9b56ef279bd0d71127440c067aa"
@@ -39,3 +40,12 @@ cilium_operator_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-operator
 longhorn_version: "1.12.0"
 longhorn_namespace: longhorn-system
 longhorn_rollout_timeout: "600s"
+### CERT-MANAGER
+cert_manager_version: "v1.17.2"
+cert_manager_namespace: cert-manager
+cert_manager_rollout_timeout: "300s"
+cert_manager_image_repo: "{{ quay_image_repo }}"
+### CLOUDNATIVEPG
+cloudnativepg_version: "0.28.3"
+cloudnativepg_namespace: cnpg-system
+cloudnativepg_rollout_timeout: "300s"

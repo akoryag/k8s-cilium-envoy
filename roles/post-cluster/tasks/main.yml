@@ -5,5 +5,11 @@
 - name: Install Longhorn
   ansible.builtin.import_tasks: longhorn.yml
 
+- name: Install cert-manager
+  ansible.builtin.import_tasks: cert-manager.yml
+
+- name: Install CloudNativePG operator
+  ansible.builtin.import_tasks: cloudnativepg.yml
+
 # - name: Install metrics-server
 #   ansible.builtin.import_tasks: metrics-server.yml
