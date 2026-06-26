@@ -15,6 +15,7 @@ cilium_helm_values:
     repository: "{{ cilium_image }}"
     useDigest: false
   operator:
+    replicas: 1
     image:
       repository: "{{ cilium_operator_image }}"
       useDigest: false

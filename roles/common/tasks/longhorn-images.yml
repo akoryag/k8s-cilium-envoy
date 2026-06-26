@@ -1,0 +1,61 @@
+---
+- name: Fetch Longhorn image manifest
+  ansible.builtin.uri:
+    url: "{{ longhorn_images_url }}"
+    return_content: true
+    status_code: [200]
+  register: _longhorn_images_manifest
+  # delegate_to: localhost
+  become: false
+
+- name: Build Longhorn image list from manifest
+  ansible.builtin.set_fact:
+    longhorn_images: "{{ _longhorn_image_refs | map('regex_replace', '^(.*)$', docker_image_repo + '/\\1') | list }}"
+  vars:
+    _longhorn_manifest_content: >-
+      {{
+        hostvars | dict2items
+        | selectattr('value._longhorn_images_manifest', 'defined')
+        | selectattr('value._longhorn_images_manifest.content', 'defined')
+        | map(attribute='value._longhorn_images_manifest.content')
+        | first
+      }}
+    _longhorn_image_refs: >-
+      {{
+        _longhorn_manifest_content.splitlines()
+        | reject('match', '^\s*#')
+        | reject('match', '^\s*$')
+        | map('trim')
+        | list
+      }}
+
+- name: Check which Longhorn images are already present locally
+  ansible.builtin.shell: |
+    crictl inspecti "{{ item }}" >/dev/null 2>&1
+  args:
+    executable: /bin/bash
+  loop: "{{ longhorn_images }}"
+  register: _longhorn_images_check
+  failed_when: false
+  changed_when: false
+
+- name: Determine missing Longhorn images
+  ansible.builtin.set_fact:
+    _longhorn_images_missing: "{{ _longhorn_images_check.results | rejectattr('rc', 'equalto', 0) | map(attribute='item') | list }}"
+
+- name: Pre-pull missing Longhorn images
+  ansible.builtin.command:
+    argv:
+      - ctr
+      - -n
+      - k8s.io
+      - images
+      - pull
+      - "{{ item }}"
+  loop: "{{ _longhorn_images_missing }}"
+  when: _longhorn_images_missing | length > 0
+  register: _longhorn_images_pull
+  until: _longhorn_images_pull.rc == 0
+  retries: 3
+  delay: 10
+  changed_when: false

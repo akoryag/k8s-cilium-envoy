@@ -3,18 +3,18 @@ ubuntu_codename: "noble"
 k8s_version: "1.35.6"
 helm_version: "3.17.2"
 helm_diff_version: "3.4.1"
-k8s_minor: "{{ k8s_version.split('.')[:2] | join('.') }}"
 pod_cidr: "10.244.0.0/16"
 control_plane_port: "6443"
 iface: "eth0"
 kubeconfig_path: /etc/kubernetes/admin.conf
 manifests_dir: /opt/manifests
-control_plane_vip: "10.10.10.250"
+control_plane_vip: "10.10.10.30"
 control_plane_endpoint: "{{ control_plane_vip }}:{{ control_plane_port }}"
 keepalived_enabled: false
 ### MIRRORS
-repo_mirror: "mirror.yandex.ru"
-docker_repo_mirror: "{{ repo_mirror }}/mirrors/download.docker.com"
+repo_mirror: "mirror.yandex.ru" # OS repo mirror
+docker_repo_mirror: "download.docker.com" #download.docker.com
+k8s_repo_mirror: "{{ repo_mirror }}/mirrors/pkgs.k8s.io" # "pkgs.k8s.io"
 docker_registry_mirrors:
   - "https://mirror.gcr.io"
   - "https://dockerhub.timeweb.cloud"
@@ -36,6 +36,7 @@ cilium_lb_ip_pool_stop: "10.10.10.220"
 cilium_l2_announcement_policy_name: lb-pool-l2
 cilium_l2_interfaces:
   - "{{ iface }}"
+### CILIUM IMAGES
 cilium_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium" # quay.io/cilium/cilium
 cilium_envoy_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium-envoy" # quay.io/cilium/cilium-envoy
 cilium_operator_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-operator" # quay.io/cilium/operator
@@ -49,6 +50,14 @@ cilium_operator_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-operator
 longhorn_version: "1.12.0"
 longhorn_namespace: longhorn-system
 longhorn_rollout_timeout: "600s"
+longhorn_trim_recurring_job_enabled: true
+longhorn_trim_recurring_job_name: trim
+longhorn_trim_recurring_job_display_name: Trim
+longhorn_trim_recurring_job_cron: "0 */3 * * *"
+longhorn_trim_recurring_job_groups:
+  - default
+longhorn_trim_recurring_job_concurrency: 1
+longhorn_trim_recurring_job_retain: 0
 ### CERT-MANAGER
 cert_manager_version: "v1.17.2"
 cert_manager_namespace: cert-manager

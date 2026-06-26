@@ -80,3 +80,7 @@
 
 - name: Pre-pull Cilium images on all nodes
   ansible.builtin.import_tasks: cilium-images.yml
+
+- name: Pre-pull Longhorn images on workers
+  ansible.builtin.import_tasks: longhorn-images.yml
+  when: inventory_hostname in groups['workers']

@@ -24,6 +24,24 @@
   changed_when: false
   run_once: true
 
+- name: Delete kube-proxy DaemonSet before Cilium install
+  when: _cilium_installed.rc != 0
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_path }}"
+      - -n
+      - kube-system
+      - delete
+      - ds
+      - kube-proxy
+      - --ignore-not-found=true
+  delegate_to: "{{ groups['master'][0] }}"
+  changed_when: _init_delete_proxy.rc == 0
+  register: _init_delete_proxy
+  run_once: true
+
 - name: Add Cilium helm repo
   kubernetes.core.helm_repository:
     name: cilium
@@ -66,8 +84,7 @@
   changed_when: false
   run_once: true
 
-- name: Delete kube-proxy DaemonSet
-  when: _cilium_installed.rc != 0
+- name: wait for coreDNS to be ready
   ansible.builtin.command:
     argv:
       - kubectl
@@ -75,15 +92,14 @@
       - "{{ kubeconfig_path }}"
       - -n
       - kube-system
-      - delete
-      - ds
-      - kube-proxy
-  register: _init_delete_proxy
+      - rollout
+      - status
+      - deployment
+      - coredns
+      - "--timeout={{ cilium_rollout_timeout }}"
   delegate_to: "{{ groups['master'][0] }}"
-  failed_when:
-    - _init_delete_proxy.rc != 0
-    - '"not found" not in _init_delete_proxy.stderr'
-  changed_when: _init_delete_proxy.rc == 0
+  retries: 3
+  delay: 30
   run_once: true
 
 - name: Render Cilium LoadBalancer IP pool manifest

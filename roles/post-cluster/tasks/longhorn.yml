@@ -24,7 +24,7 @@
   delay: 30
   run_once: true
 
-- name: Wait for Longhorn manager rollout
+- name: Wait for Longhorn rollout
   when: _longhorn_helm is changed
   ansible.builtin.command:
     argv:
@@ -36,8 +36,46 @@
       - rollout
       - status
       - daemonset
-      - longhorn-manager
+      - "{{ item }}"
       - "--timeout={{ longhorn_rollout_timeout }}"
+  loop:
+    - longhorn-manager
+    - longhorn-csi-plugin
   delegate_to: "{{ groups['master'][0] }}"
+  retries: 3
+  delay: 30
   changed_when: false
+  run_once: true
+
+- name: Ensure Longhorn manifest directory exists
+  when: longhorn_trim_recurring_job_enabled | bool
+  ansible.builtin.file:
+    path: "{{ manifests_dir }}/longhorn"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ groups['master'][0] }}"
+  run_once: true
+
+- name: Render Longhorn filesystem-trim RecurringJob manifest
+  when: longhorn_trim_recurring_job_enabled | bool
+  ansible.builtin.template:
+    src: longhorn-recurring-job-trim.yaml.j2
+    dest: "{{ manifests_dir }}/longhorn/recurring-job-trim.yaml"
+    mode: "0644"
+  delegate_to: "{{ groups['master'][0] }}"
+  run_once: true
+
+- name: Apply Longhorn filesystem-trim RecurringJob
+  when: longhorn_trim_recurring_job_enabled | bool
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - "{{ kubeconfig_path }}"
+      - apply
+      - -f
+      - "{{ manifests_dir }}/longhorn/recurring-job-trim.yaml"
+  delegate_to: "{{ groups['master'][0] }}"
+  register: _longhorn_trim_recurring_job
+  changed_when: "'configured' in _longhorn_trim_recurring_job.stdout or 'created' in _longhorn_trim_recurring_job.stdout"
   run_once: true

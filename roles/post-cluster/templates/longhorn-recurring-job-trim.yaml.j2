@@ -1,0 +1,18 @@
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: {{ longhorn_trim_recurring_job_name }}
+  namespace: {{ longhorn_namespace }}
+spec:
+  concurrency: {{ longhorn_trim_recurring_job_concurrency }}
+  cron: {{ longhorn_trim_recurring_job_cron | quote }}
+  groups:
+{% for group in longhorn_trim_recurring_job_groups %}
+    - {{ group }}
+{% endfor %}
+  labels: {}
+  name: {{ longhorn_trim_recurring_job_display_name }}
+  parameters: {}
+  retain: {{ longhorn_trim_recurring_job_retain }}
+  task: filesystem-trim

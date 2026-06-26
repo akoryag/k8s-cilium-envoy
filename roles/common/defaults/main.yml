@@ -1,4 +1,6 @@
 ---
+k8s_minor: "{{ k8s_version.split('.')[:2] | join('.') }}"
+
 keepalived_interface: "{{ iface }}"
 keepalived_vrid: 51
 keepalived_auth_pass: "k8scp51!"
@@ -26,3 +28,5 @@ longhorn_services:
   - iscsid
   - open-iscsi
   - rpcbind
+
+longhorn_images_url: "https://raw.githubusercontent.com/longhorn/longhorn/v{{ longhorn_version }}/deploy/longhorn-images.txt"
