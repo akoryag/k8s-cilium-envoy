@@ -1,0 +1,25 @@
+---
+- name: Set keepalived node parameters
+  ansible.builtin.set_fact:
+    keepalived_state: "{{ 'MASTER' if inventory_hostname == groups['master'][0] else 'BACKUP' }}"
+    keepalived_priority: "{{ keepalived_priority_base - (groups['master'].index(inventory_hostname) * keepalived_priority_step) }}"
+    keepalived_unicast_peers: "{{ groups['master'] | map('extract', hostvars, 'ansible_host') | list }}"
+
+- name: Install keepalived
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+    update_cache: true
+
+- name: Configure keepalived
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: "0644"
+  notify: Restart keepalived
+
+- name: Enable and start keepalived
+  ansible.builtin.systemd:
+    name: keepalived
+    enabled: true
+    state: started

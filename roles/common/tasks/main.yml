@@ -56,6 +56,12 @@
     regexp: '^URIs:\s*https?://([a-z]{2}\.)?(archive|security)\.ubuntu\.com/ubuntu/?'
     replace: 'URIs: http://{{ repo_mirror }}/ubuntu/'
 
+- name: Configure keepalived for control-plane HA
+  ansible.builtin.import_tasks: keepalived.yml
+  when:
+    - keepalived_enabled | bool
+    - inventory_hostname in groups['master']
+
 - name: Install Docker
   ansible.builtin.import_tasks: docker.yml
 

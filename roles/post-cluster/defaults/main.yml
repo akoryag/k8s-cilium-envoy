@@ -1,9 +1,11 @@
 ---
 cilium_helm_values:
   kubeProxyReplacement: true
+  k8sServiceHost: "{{ control_plane_vip }}"
+  k8sServicePort: "{{ control_plane_port }}"
   ingressController:
     enabled: true
-    loadbalancerMode: dedicated
+    loadbalancerMode: "{{ cilium_lb_mode }}"
   envoy:
     enabled: true
     image:

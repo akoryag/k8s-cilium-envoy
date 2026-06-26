@@ -13,3 +13,8 @@
   ansible.builtin.systemd:
     name: systemd-journald
     state: restarted
+
+- name: Restart keepalived
+  ansible.builtin.systemd:
+    name: keepalived
+    state: restarted

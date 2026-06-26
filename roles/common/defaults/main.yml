@@ -1,8 +1,19 @@
 ---
+keepalived_interface: "{{ iface }}"
+keepalived_vrid: 51
+keepalived_auth_pass: "k8scp51!"
+keepalived_priority_base: 150
+keepalived_priority_step: 10
+
 cilium_images:
   - "{{ cilium_image }}:v{{ cilium_version }}"
   - "{{ cilium_operator_image }}-generic:v{{ cilium_version }}"
   - "{{ cilium_envoy_image }}:v{{ cilium_envoy_version }}"
+  # - "{{ cilium_hubble_image }}:v{{ cilium_hubble_version }}"
+  # - "{{ cilium_hubble_relay_image }}:v{{ cilium_hubble_relay_version }}"
+  # - "{{ cilium_hubble_ui_image }}:v{{ cilium_hubble_ui_version }}"
+  # - "{{ cilium_hubble_ui_backend_image }}:v{{ cilium_hubble_ui_backend_version }}"
+  # - "{{ cilium_hubble_ui_frontend_image }}:v{{ cilium_hubble_ui_frontend_version }}"
 
 longhorn_packages:
   - open-iscsi

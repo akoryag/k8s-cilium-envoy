@@ -6,10 +6,12 @@ helm_diff_version: "3.4.1"
 k8s_minor: "{{ k8s_version.split('.')[:2] | join('.') }}"
 pod_cidr: "10.244.0.0/16"
 control_plane_port: "6443"
+iface: "eth0"
 kubeconfig_path: /etc/kubernetes/admin.conf
 manifests_dir: /opt/manifests
-control_plane_vip: "10.10.10.30"
+control_plane_vip: "10.10.10.250"
 control_plane_endpoint: "{{ control_plane_vip }}:{{ control_plane_port }}"
+keepalived_enabled: false
 ### MIRRORS
 repo_mirror: "mirror.yandex.ru"
 docker_repo_mirror: "{{ repo_mirror }}/mirrors/download.docker.com"
@@ -27,15 +29,22 @@ cilium_hubble_enabled: false
 cilium_l2_announcements_enabled: true
 cilium_k8s_client_rate_limit_qps: 10
 cilium_k8s_client_rate_limit_burst: 20
+cilium_lb_mode: "dedicated" # shared | dedicated | tunneled
 cilium_lb_ip_pool_name: lb-pool-default
 cilium_lb_ip_pool_start: "10.10.10.200"
 cilium_lb_ip_pool_stop: "10.10.10.220"
 cilium_l2_announcement_policy_name: lb-pool-l2
 cilium_l2_interfaces:
-  - eth0
+  - "{{ iface }}"
 cilium_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium" # quay.io/cilium/cilium
 cilium_envoy_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium-envoy" # quay.io/cilium/cilium-envoy
 cilium_operator_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-operator" # quay.io/cilium/operator
+# cilium_hubble_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble" # quay.io/cilium/hubble
+# cilium_hubble_relay_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-relay" # quay.io/cilium/hubble-relay
+# cilium_hubble_ui_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-ui" # quay.io/cilium/hubble-ui
+# cilium_hubble_ui_backend_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-ui-backend" # quay.io/cilium/hubble-ui-backend
+# cilium_hubble_ui_frontend_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-ui-frontend" # quay.io/cilium/hubble-ui-frontend
+# cilium_hubble_ui_frontend_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-ui-frontend" # quay.io/cilium/hubble-ui-frontend
 ### LONGHORN
 longhorn_version: "1.12.0"
 longhorn_namespace: longhorn-system
