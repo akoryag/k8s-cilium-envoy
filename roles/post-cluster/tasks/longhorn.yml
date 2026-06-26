@@ -42,8 +42,24 @@
     - longhorn-manager
     - longhorn-csi-plugin
   delegate_to: "{{ groups['master'][0] }}"
+  changed_when: false
   retries: 3
   delay: 30
+  run_once: true
+
+- name: Wait for Longhorn admission webhook endpoints
+  ansible.builtin.shell: |
+    kubectl --kubeconfig "{{ kubeconfig_path }}" \
+      -n "{{ longhorn_namespace }}" \
+      get endpoints longhorn-admission-webhook \
+      -o jsonpath='{.subsets[0].addresses[0].ip}' | grep -q .
+  args:
+    executable: /bin/bash
+  delegate_to: "{{ groups['master'][0] }}"
+  register: _longhorn_webhook_wait
+  until: _longhorn_webhook_wait.rc == 0
+  retries: 60
+  delay: 10
   changed_when: false
   run_once: true
 
@@ -77,5 +93,8 @@
       - "{{ manifests_dir }}/longhorn/recurring-job-trim.yaml"
   delegate_to: "{{ groups['master'][0] }}"
   register: _longhorn_trim_recurring_job
+  until: _longhorn_trim_recurring_job.rc == 0
+  retries: 5
+  delay: 30
   changed_when: "'configured' in _longhorn_trim_recurring_job.stdout or 'created' in _longhorn_trim_recurring_job.stdout"
   run_once: true
