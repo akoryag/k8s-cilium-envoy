@@ -91,30 +91,29 @@
       changed_when: false
       failed_when: false
 
-    - name: Remove outdated Helm diff plugin
+    - name: Reinstall Helm diff plugin when missing or outdated
       when:
-        - _helm_diff_version_check.rc == 0
-        - helm_diff_version not in _helm_diff_version_check.stdout
-      ansible.builtin.command:
-        argv:
-          - helm
-          - plugin
-          - uninstall
-          - diff
-      changed_when: true
+        - _helm_diff_version_check.rc != 0 or helm_diff_version not in _helm_diff_version_check.stdout
+      block:
+        - name: Remove broken or outdated Helm diff plugin
+          ansible.builtin.command:
+            argv:
+              - helm
+              - plugin
+              - uninstall
+              - diff
+          register: _helm_diff_uninstall
+          failed_when: false
+          changed_when: _helm_diff_uninstall.rc == 0
 
-    - name: Install Helm diff plugin
-      when: _helm_diff_version_check.rc != 0 or helm_diff_version not in _helm_diff_version_check.stdout
-      ansible.builtin.command:
-        argv:
-          - helm
-          - plugin
-          - install
-          - https://github.com/databus23/helm-diff
-          - --version
-          - "v{{ helm_diff_version }}"
-      register: _helm_diff_install
-      failed_when:
-        - _helm_diff_install.rc != 0
-        - '"already exists" not in _helm_diff_install.stderr'
-      changed_when: _helm_diff_install.rc == 0
+        - name: Install Helm diff plugin
+          ansible.builtin.command:
+            argv:
+              - helm
+              - plugin
+              - install
+              - https://github.com/databus23/helm-diff
+              - --version
+              - "v{{ helm_diff_version }}"
+          register: _helm_diff_install
+          changed_when: _helm_diff_install.rc == 0
