@@ -63,3 +63,6 @@
     content: |
       runtime-endpoint: unix:///run/containerd/containerd.sock
     mode: "0644"
+
+- name: Apply pending service restarts
+  ansible.builtin.meta: flush_handlers

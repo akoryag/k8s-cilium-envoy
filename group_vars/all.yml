@@ -12,15 +12,16 @@ control_plane_vip: "10.10.10.30"
 control_plane_endpoint: "{{ control_plane_vip }}:{{ control_plane_port }}"
 keepalived_enabled: false
 ### MIRRORS
+os_repo_enabled: true # Применение зеркал для APT 
 repo_mirror: "mirror.yandex.ru" # OS repo mirror
-docker_repo_mirror: "download.docker.com" #download.docker.com
+docker_repo_mirror: "download.docker.com" # Docker repo mirror
 k8s_repo_mirror: "{{ repo_mirror }}/mirrors/pkgs.k8s.io" # "pkgs.k8s.io"
-docker_registry_mirrors:
-  - "https://mirror.gcr.io"
-  - "https://dockerhub.timeweb.cloud"
-k8s_image_repo: "registry.aliyuncs.com/google_containers" # registry.k8s.io
-docker_image_repo: "dockerhub.timeweb.cloud" # docker.io
-quay_image_repo: "quay.m.daocloud.io" # quay.io
+# docker_registry_mirrors:
+#   - "https://mirror.gcr.io"
+#   - "https://dockerhub.timeweb.cloud"
+k8s_image_repo: "registry.k8s.io" # registry.k8s.io registry.aliyuncs.com/google_containers
+docker_image_repo: "docker.io" # dockerhub.timeweb.cloud
+quay_image_repo: "quay.io" # quay.m.daocloud.io
 ### CILIUM
 cilium_version: "1.19.3"
 cilium_envoy_version: "1.36.6-1776000132-2437d2edeaf4d9b56ef279bd0d71127440c067aa"
@@ -37,9 +38,9 @@ cilium_l2_announcement_policy_name: lb-pool-l2
 cilium_l2_interfaces:
   - "{{ iface }}"
 ### CILIUM IMAGES
-cilium_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium" # quay.io/cilium/cilium
-cilium_envoy_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-cilium-envoy" # quay.io/cilium/cilium-envoy
-cilium_operator_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-operator" # quay.io/cilium/operator
+cilium_image: "quay.io/cilium/cilium" # {{ docker_image_repo }}/rancher/mirrored-cilium-cilium
+cilium_envoy_image: "quay.io/cilium/cilium-envoy" # {{ docker_image_repo }}/rancher/mirrored-cilium-cilium-envoy
+cilium_operator_image: "quay.io/cilium/operator" # {{ docker_image_repo }}/rancher/mirrored-cilium-operator
 # cilium_hubble_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble" # quay.io/cilium/hubble
 # cilium_hubble_relay_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-relay" # quay.io/cilium/hubble-relay
 # cilium_hubble_ui_image: "{{ docker_image_repo }}/rancher/mirrored-cilium-hubble-ui" # quay.io/cilium/hubble-ui
